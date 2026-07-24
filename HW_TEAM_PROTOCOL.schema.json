@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://safeon.local/schema/distance-packet-v1.json",
+  "title": "SafeOnDistancePacketV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "distance_m",
+    "distance_level"
+  ],
+  "properties": {
+    "distance_m": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "metre"
+    },
+    "distance_level": {
+      "type": "string",
+      "enum": [
+        "SAFE",
+        "CAUTION",
+        "DANGER"
+      ]
+    }
+  },
+  "x-http": {
+    "method": "POST",
+    "url": "http://CONTROL_LAPTOP_IP:8000/api/distance",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "success_status": 200,
+    "invalid_packet_status": 422
+  },
+  "x-distance-level-rule": [
+    {
+      "condition": "distance_m <= 1.0",
+      "distance_level": "DANGER"
+    },
+    {
+      "condition": "1.0 < distance_m <= 3.0",
+      "distance_level": "CAUTION"
+    },
+    {
+      "condition": "distance_m > 3.0",
+      "distance_level": "SAFE"
+    }
+  ],
+  "examples": [
+    {
+      "distance_m": 0.82,
+      "distance_level": "DANGER"
+    }
+  ]
+}

@@ -1,11 +1,3 @@
-/*
- * Optional ESP32 sender.
- *
- * The primary/easiest path is distance_sender.py on the measuring laptop.
- * If the ESP32 must transmit, call sendDistance() with the distance and stage
- * calculated by the laptop-side webcam program.
- */
-
 #include <HTTPClient.h>
 #include <WiFi.h>
 
@@ -13,24 +5,55 @@ const char* WIFI_SSID = "YOUR_WIFI_NAME";
 const char* WIFI_PASSWORD = "YOUR_WIFI_PASSWORD";
 const char* CONTROL_URL = "http://192.168.0.10:8000/api/distance";
 
-bool sendDistance(float distanceM, const char* distanceLevel) {
+enum class DistanceLevel {
+  SAFE,
+  CAUTION,
+  DANGER
+};
+
+DistanceLevel distanceLevelFor(float distanceM) {
+  if (distanceM <= 1.0f) {
+    return DistanceLevel::DANGER;
+  }
+  if (distanceM <= 3.0f) {
+    return DistanceLevel::CAUTION;
+  }
+  return DistanceLevel::SAFE;
+}
+
+const char* distanceLevelText(DistanceLevel level) {
+  switch (level) {
+    case DistanceLevel::DANGER:
+      return "DANGER";
+    case DistanceLevel::CAUTION:
+      return "CAUTION";
+    default:
+      return "SAFE";
+  }
+}
+
+bool sendDistance(float distanceM, DistanceLevel distanceLevel) {
   if (WiFi.status() != WL_CONNECTED) {
     return false;
   }
 
-  HTTPClient http;
-  http.begin(CONTROL_URL);
-  http.addHeader("Content-Type", "application/json");
-
   String body = "{\"distance_m\":";
   body += String(distanceM, 2);
   body += ",\"distance_level\":\"";
-  body += distanceLevel;
+  body += distanceLevelText(distanceLevel);
   body += "\"}";
 
-  int status = http.POST(body);
+  HTTPClient http;
+  http.begin(CONTROL_URL);
+  http.addHeader("Content-Type", "application/json");
+  const int statusCode = http.POST(body);
   http.end();
-  return status >= 200 && status < 300;
+
+  return statusCode == 200;
+}
+
+bool sendMeasuredDistance(float distanceM) {
+  return sendDistance(distanceM, distanceLevelFor(distanceM));
 }
 
 void setup() {
@@ -42,8 +65,7 @@ void setup() {
 }
 
 void loop() {
-  // Example only. Replace these with the latest values received/calculated
-  // by your webcam-distance program.
-  sendDistance(2.40, "CAUTION");
+  const float distanceFromWebcamM = 2.40f;
+  sendMeasuredDistance(distanceFromWebcamM);
   delay(500);
 }

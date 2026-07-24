@@ -6,9 +6,16 @@ import argparse
 import json
 import urllib.error
 import urllib.request
+from typing import Literal, TypedDict
 
 
 DISTANCE_LEVELS = ("SAFE", "CAUTION", "DANGER")
+DistanceLevel = Literal["SAFE", "CAUTION", "DANGER"]
+
+
+class DistancePacket(TypedDict):
+    distance_m: float
+    distance_level: DistanceLevel
 
 
 class DistanceSendError(RuntimeError):
@@ -37,6 +44,16 @@ def check_server(server: str = "http://127.0.0.1:8000") -> dict:
     return _request(server, "/api/health")
 
 
+def build_packet(distance_m: float, distance_level: str) -> DistancePacket:
+    level = str(distance_level).strip().upper()
+    if level not in DISTANCE_LEVELS:
+        raise ValueError(f"distance_level은 {DISTANCE_LEVELS} 중 하나여야 합니다.")
+    return {
+        "distance_m": float(distance_m),
+        "distance_level": level,
+    }
+
+
 def send_distance(
     distance_m: float,
     distance_level: str,
@@ -44,14 +61,11 @@ def send_distance(
     server: str = "http://127.0.0.1:8000",
 ) -> dict:
     """Send exactly the two values accepted by the control server."""
-    level = str(distance_level).strip().upper()
-    if level not in DISTANCE_LEVELS:
-        raise ValueError(f"distance_level은 {DISTANCE_LEVELS} 중 하나여야 합니다.")
-    payload = {
-        "distance_m": float(distance_m),
-        "distance_level": level,
-    }
-    return _request(server, "/api/distance", payload)
+    return _request(
+        server,
+        "/api/distance",
+        build_packet(distance_m, distance_level),
+    )
 
 
 def main() -> int:

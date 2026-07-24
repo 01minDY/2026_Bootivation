@@ -11,6 +11,7 @@ from pydantic import ValidationError
 import db
 import simulator
 from distance_ingest import DistanceIngest
+from distance_sender import build_packet
 from models import DistanceReading
 
 
@@ -19,6 +20,12 @@ class DistanceContractTests(unittest.TestCase):
         self.assertEqual(
             set(simulator.payload_at(18)),
             {"distance_m", "distance_level"},
+        )
+
+    def test_hw_sender_builds_the_same_two_field_packet(self):
+        self.assertEqual(
+            build_packet(0.82, "danger"),
+            {"distance_m": 0.82, "distance_level": "DANGER"},
         )
 
     def test_extra_field_is_rejected(self):
