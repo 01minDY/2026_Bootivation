@@ -1,6 +1,6 @@
 """Pure SafeON safety calculations.
 
-The functions are independent from FastAPI, MQTT and SQLite so the exact
+The functions are independent from FastAPI, HTTP and SQLite so the exact
 specification boundaries can be unit-tested.
 """
 

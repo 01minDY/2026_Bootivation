@@ -1,31 +1,27 @@
-"""SafeON runtime configuration.
-
-The values in this module mirror the implementation specification.  Hardware
-firmware and the control server must use the same distance thresholds.
-Environment variables are supported for deployment without editing source.
-"""
+"""SafeON control-server configuration."""
 
 from __future__ import annotations
 
 import os
 
-
-# MQTT
-MQTT_HOST = os.getenv("SAFEON_MQTT_HOST", "localhost")
-MQTT_PORT = int(os.getenv("SAFEON_MQTT_PORT", "1883"))
-MQTT_BASE = os.getenv("SAFEON_MQTT_BASE", "safeon")
-
 # Distance stages (metres)
 DISTANCE_DANGER_M = 1.0
 DISTANCE_CAUTION_M = 3.0
 
-# Device health
+# HTTP distance-source health
 PROXIMITY_DEGRADED_SEC = 2.0
 PROXIMITY_OFFLINE_SEC = 5.0
 ENV_INTERVAL_SEC = 30 * 60
 ENV_OFFLINE_MISSES = 2
-CAMERA_DEGRADED_SEC = 5.0
-CAMERA_OFFLINE_SEC = 15.0
+
+# Server-generated values. Only distance_m and distance_level arrive over the
+# network; these values fill the existing dashboard/report contract.
+MOCK_WORKER_ID = "W01"
+MOCK_EQUIPMENT_ID = "E01"
+MOCK_TEMPERATURE_C = 31.4
+MOCK_HUMIDITY_PCT = 68.0
+MOCK_WORKER_BATTERY_PCT = 93.0
+MOCK_EQUIPMENT_BATTERY_PCT = 89.0
 
 # Incident rules
 LONG_EXPOSURE_SEC = 30.0

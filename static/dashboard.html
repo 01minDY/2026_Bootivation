@@ -263,7 +263,7 @@ tbody tr:hover{background:#fafcff}.table-wrap{overflow:auto}
 
       <section class="view" id="view-devices">
         <div class="page-head"><div><h1>장치상태</h1><div class="subtle">2초 미수신 DEGRADED, 5초 미수신 OFFLINE을 서버가 자체 판정합니다.</div></div></div>
-        <article class="card"><div class="table-wrap"><table><thead><tr><th>장치 ID</th><th>유형</th><th>상태</th><th>마지막 정상 통신</th><th>수신 경과</th><th>MQTT</th><th>배터리</th><th>오류코드</th><th>펌웨어</th><th>온라인율</th></tr></thead><tbody id="deviceRows"></tbody></table></div></article>
+        <article class="card"><div class="table-wrap"><table><thead><tr><th>장치 ID</th><th>유형</th><th>상태</th><th>마지막 정상 통신</th><th>수신 경과</th><th>HTTP</th><th>배터리</th><th>오류코드</th><th>펌웨어</th><th>온라인율</th></tr></thead><tbody id="deviceRows"></tbody></table></div></article>
       </section>
 
       <section class="view" id="view-report">
@@ -513,7 +513,7 @@ function renderEnvironment(){
   el.innerHTML=rows.length?rows.map(x=>`<tr><td><strong>${esc(x.equipment_id)}</strong></td><td>${fmtTime(x.timestamp)}</td><td>${Number(x.temperature_c).toFixed(1)}℃</td><td>${Number(x.humidity_pct).toFixed(1)}%</td><td><strong>${Number(x.apparent_temperature_c).toFixed(1)}℃</strong></td><td>${badge(x.heat_level)}</td><td>${badge(x.sensor_status)}</td><td style="min-width:300px">${esc(x.guidance||"")}</td></tr>`).join(""):'<tr><td colspan="8" class="empty">환경 데이터가 없습니다.</td></tr>';
 }
 function renderDevices(){
-  const el=document.getElementById("deviceRows");el.innerHTML=state.devices.length?state.devices.map(x=>`<tr><td><strong>${esc(x.device_id)}</strong></td><td>${esc(x.device_type)}</td><td>${badge(x.status)}</td><td>${fmtTime(x.last_seen)}</td><td>${Number(x.age_seconds).toFixed(1)}초</td><td>${x.mqtt_connected?"연결":"미연결"}</td><td>${x.battery_pct==null?"--":Number(x.battery_pct).toFixed(0)+"%"}</td><td>${esc(x.sensor_error_code||"--")}</td><td>${esc(x.firmware_version||"--")}</td><td>${Number(x.online_rate).toFixed(1)}%</td></tr>`).join(""):'<tr><td colspan="10" class="empty">등록된 장치가 없습니다.</td></tr>';
+  const el=document.getElementById("deviceRows");el.innerHTML=state.devices.length?state.devices.map(x=>`<tr><td><strong>${esc(x.device_id)}</strong></td><td>${esc(x.device_type)}</td><td>${badge(x.status)}</td><td>${fmtTime(x.last_seen)}</td><td>${Number(x.age_seconds).toFixed(1)}초</td><td>${x.connected?"연결":"미연결"}</td><td>${x.battery_pct==null?"--":Number(x.battery_pct).toFixed(0)+"%"}</td><td>${esc(x.sensor_error_code||"--")}</td><td>${esc(x.firmware_version||"--")}</td><td>${Number(x.online_rate).toFixed(1)}%</td></tr>`).join(""):'<tr><td colspan="10" class="empty">등록된 장치가 없습니다.</td></tr>';
 }
 function renderReport(){
   const r=state.report;if(!r)return;document.getElementById("reportSummary").textContent=r.summary;

@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS devices (
     last_seen_epoch REAL NOT NULL,
     first_seen_epoch REAL NOT NULL,
     expected_interval_sec REAL NOT NULL,
-    mqtt_connected INTEGER NOT NULL DEFAULT 1,
+    connected INTEGER NOT NULL DEFAULT 1,
     battery_pct REAL,
     sensor_error_code TEXT,
     firmware_version TEXT,
@@ -135,6 +135,13 @@ def _migrate_schema(conn: sqlite3.Connection):
             conn.execute(
                 f"ALTER TABLE improvement_actions ADD COLUMN {name} {definition}"
             )
+    device_columns = {
+        row["name"] for row in conn.execute("PRAGMA table_info(devices)")
+    }
+    if "connected" not in device_columns:
+        conn.execute(
+            "ALTER TABLE devices ADD COLUMN connected INTEGER NOT NULL DEFAULT 1"
+        )
 
 
 def get_conn(path: str = config.DB_PATH) -> sqlite3.Connection:
@@ -255,7 +262,7 @@ def _upsert_device(
     device_type: str,
     timestamp,
     expected_interval_sec: float,
-    transport: str = "mqtt",
+    transport: str = "http",
     battery_pct=None,
     sensor_error_code=None,
     firmware_version=None,
@@ -276,7 +283,7 @@ def _upsert_device(
         INSERT INTO devices (
             device_id, device_type, status, reported_status, last_seen,
             last_seen_epoch, first_seen_epoch, expected_interval_sec,
-            mqtt_connected, battery_pct, sensor_error_code,
+            connected, battery_pct, sensor_error_code,
             firmware_version, message_count
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
@@ -289,7 +296,7 @@ def _upsert_device(
                 devices.expected_interval_sec,
                 excluded.expected_interval_sec
             ),
-            mqtt_connected=excluded.mqtt_connected,
+            connected=excluded.connected,
             battery_pct=COALESCE(excluded.battery_pct, devices.battery_pct),
             sensor_error_code=excluded.sensor_error_code,
             firmware_version=COALESCE(
@@ -307,7 +314,7 @@ def _upsert_device(
             epoch,
             epoch,
             expected_interval_sec,
-            1 if transport == "mqtt" else 0,
+            1 if transport == "http" else 0,
             battery_pct,
             sensor_error_code,
             firmware_version,
@@ -315,7 +322,7 @@ def _upsert_device(
     )
 
 
-def record_proximity(conn, reading: dict, transport: str = "mqtt") -> dict:
+def record_proximity(conn, reading: dict, transport: str = "http") -> dict:
     """Update device state and open/update/finish a DANGER incident."""
     timestamp = _as_iso(reading.get("timestamp"))
     epoch = _as_epoch(reading.get("timestamp"))
@@ -500,7 +507,7 @@ def record_proximity(conn, reading: dict, transport: str = "mqtt") -> dict:
             raise
 
 
-def record_environment(conn, reading: dict, transport: str = "mqtt") -> dict:
+def record_environment(conn, reading: dict, transport: str = "mock") -> dict:
     with _DB_LOCK:
         try:
             _upsert_device(
@@ -539,7 +546,7 @@ def record_environment(conn, reading: dict, transport: str = "mqtt") -> dict:
             raise
 
 
-def record_camera(conn, reading: dict, transport: str = "mqtt") -> dict:
+def record_camera(conn, reading: dict, transport: str = "mock") -> dict:
     reported = {
         "ONLINE": "NORMAL",
         "ERROR": "ERROR",
@@ -592,14 +599,6 @@ def evaluate_device_health(conn, now: float | None = None) -> list[dict]:
                 status = "OFFLINE"
             elif row["reported_status"] == "ERROR":
                 status = "DEGRADED"
-            elif row["device_type"] == "CAMERA":
-                status = (
-                    "OFFLINE"
-                    if age >= config.CAMERA_OFFLINE_SEC
-                    else "DEGRADED"
-                    if age >= config.CAMERA_DEGRADED_SEC
-                    else "ONLINE"
-                )
             elif expected >= config.ENV_INTERVAL_SEC:
                 status = (
                     "OFFLINE"
@@ -620,12 +619,12 @@ def evaluate_device_health(conn, now: float | None = None) -> list[dict]:
                 conn.execute(
                     """
                     UPDATE devices
-                    SET status=?, mqtt_connected=?
+                    SET status=?, connected=?
                     WHERE device_id=? AND device_type=?
                     """,
                     (
                         status,
-                        0 if status == "OFFLINE" else row["mqtt_connected"],
+                        0 if status == "OFFLINE" else row["connected"],
                         row["device_id"],
                         row["device_type"],
                     ),
@@ -699,7 +698,7 @@ def _device_dict(row, now=None):
         1,
     )
     item["age_seconds"] = round(max(0.0, now - item["last_seen_epoch"]), 1)
-    item["mqtt_connected"] = bool(item["mqtt_connected"])
+    item["connected"] = bool(item["connected"])
     return item
 
 

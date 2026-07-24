@@ -1,16 +1,47 @@
-"""Tests for the deterministic 30-second SafeON demo scenario."""
+"""Tests for the distance-only HTTP contract and 30-second scenario."""
 
 from __future__ import annotations
 
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from pydantic import ValidationError
+
 import db
-import risk_engine
 import simulator
-from mqtt_ingest import Ingest
+from distance_ingest import DistanceIngest
+from models import DistanceReading
+
+
+class DistanceContractTests(unittest.TestCase):
+    def test_wire_payload_has_exactly_two_fields(self):
+        self.assertEqual(
+            set(simulator.payload_at(18)),
+            {"distance_m", "distance_level"},
+        )
+
+    def test_extra_field_is_rejected(self):
+        with self.assertRaises(ValidationError):
+            DistanceReading.model_validate(
+                {
+                    "distance_m": 0.82,
+                    "distance_level": "DANGER",
+                    "temperature_c": 31.4,
+                }
+            )
+
+    def test_only_three_input_stages_are_allowed(self):
+        for level in ("SAFE", "CAUTION", "DANGER"):
+            self.assertEqual(
+                DistanceReading(
+                    distance_m=2.0,
+                    distance_level=level,
+                ).distance_level,
+                level,
+            )
+        with self.assertRaises(ValidationError):
+            DistanceReading(distance_m=2.0, distance_level="OFFLINE")
 
 
 class DemoScenarioTests(unittest.TestCase):
@@ -21,7 +52,7 @@ class DemoScenarioTests(unittest.TestCase):
             simulator.DEMO_DURATION_SECONDS,
         )
 
-    def test_all_three_distance_stages_are_clear(self):
+    def test_all_three_stages_are_visible(self):
         expected = {
             4: "SAFE",
             10: "CAUTION",
@@ -31,9 +62,8 @@ class DemoScenarioTests(unittest.TestCase):
         }
         for second, level in expected.items():
             with self.subTest(second=second):
-                distance = simulator.scenario_at(second)
                 self.assertEqual(
-                    risk_engine.risk_level_for_distance(distance),
+                    simulator.payload_at(second)["distance_level"],
                     level,
                 )
 
@@ -45,68 +75,31 @@ class DemoScenarioTests(unittest.TestCase):
                 places=6,
             )
 
-    def test_environment_changes_gradually(self):
-        start_temperature, start_humidity = simulator.environment_at(0)
-        end_temperature, end_humidity = simulator.environment_at(30)
-        self.assertLess(abs(end_temperature - start_temperature), 1.0)
-        self.assertLess(abs(end_humidity - start_humidity), 3.0)
-
 
 class DashboardIntegrationTests(unittest.TestCase):
-    def test_scenario_creates_closed_clickable_report_data(self):
+    def test_server_enrichment_creates_clickable_incident_report(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             conn = db.get_conn(str(Path(temp_dir) / "demo.db"))
-            ingest = Ingest(conn)
-            started = datetime(
-                2026,
-                7,
-                25,
-                14,
-                0,
-                tzinfo=timezone(timedelta(hours=9)),
+            ingest = DistanceIngest(conn)
+            ingest.handle({"distance_m": 4.2, "distance_level": "SAFE"})
+            started = ingest.handle(
+                {"distance_m": 0.82, "distance_level": "DANGER"}
             )
-            transitions = []
-            event_id = None
-
-            for second in range(31):
-                timestamp = (started + timedelta(seconds=second)).isoformat()
-                distance = round(simulator.scenario_at(second), 2)
-                level = risk_engine.risk_level_for_distance(distance)
-                if second in {0, 16, 24}:
-                    ingest.handle_environment(
-                        simulator._environment_payload(
-                            timestamp=timestamp,
-                            elapsed=second,
-                            heat=False,
-                        ),
-                        transport="http",
-                    )
-                result = ingest.handle_proximity(
-                    simulator._proximity_payload(
-                        timestamp=timestamp,
-                        sequence=10_000 + second,
-                        distance_m=distance,
-                        level=level,
-                        elapsed=second,
-                    ),
-                    transport="http",
-                )
-                if result["incident_transition"]:
-                    transitions.append(result["incident_transition"])
-                if result.get("incident"):
-                    event_id = result["incident"]["event_id"]
-
+            ingest.handle({"distance_m": 0.55, "distance_level": "DANGER"})
+            ended = ingest.handle(
+                {"distance_m": 1.4, "distance_level": "CAUTION"}
+            )
+            event_id = started["incident"]["event_id"]
             report = db.get_incident_report(conn, event_id)
             conn.close()
 
-        self.assertIn("STARTED", transitions)
-        self.assertIn("ENDED", transitions)
+        self.assertEqual(started["incident_transition"], "STARTED")
+        self.assertEqual(ended["incident_transition"], "ENDED")
         self.assertIsNotNone(report["end_ts"])
         self.assertEqual(report["risk_level"], "DANGER")
-        self.assertLessEqual(report["min_distance_m"], 0.6)
-        self.assertIsNotNone(report["environment"])
-        self.assertIsNotNone(report["environment"]["temperature_c"])
-        self.assertIsNotNone(report["environment"]["humidity_pct"])
+        self.assertEqual(report["min_distance_m"], 0.55)
+        self.assertEqual(report["environment"]["temperature_c"], 31.4)
+        self.assertEqual(report["environment"]["humidity_pct"], 68.0)
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""SafeON control server: MQTT ingestion, REST API and live dashboard."""
+"""SafeON control server: two-field HTTP ingestion and live dashboard."""
 
 from __future__ import annotations
 
@@ -10,21 +10,20 @@ from contextlib import asynccontextmanager
 from datetime import date
 
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 
 import config
 import db
 import risk_engine
 from models import (
-    CameraReading,
-    EnvironmentReading,
+    DistanceReading,
     ImprovementActionCreate,
     ImprovementActionUpdate,
     IncidentActionUpdate,
-    ProximityReading,
     RecommendationApprovalUpdate,
 )
-from mqtt_ingest import Ingest
+from distance_ingest import DistanceIngest
 
 
 conn = db.get_conn()
@@ -51,7 +50,7 @@ def broadcast_sync(payload: dict):
     asyncio.run_coroutine_threadsafe(send(), loop)
 
 
-ingest = Ingest(conn, on_update=broadcast_sync)
+ingest = DistanceIngest(conn, on_update=broadcast_sync)
 
 
 async def monitor_devices():
@@ -66,48 +65,30 @@ async def monitor_devices():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     loop_ref["loop"] = asyncio.get_running_loop()
-    mqtt_error = None
-    try:
-        ingest.start()
-    except Exception as exc:
-        mqtt_error = str(exc)
-        print(f"[SafeON] MQTT 연결 실패, HTTP 백업으로 기동: {exc}")
-    app.state.mqtt_error = mqtt_error
     monitor_task = asyncio.create_task(monitor_devices())
     try:
         yield
     finally:
         monitor_task.cancel()
-        ingest.stop()
 
 
 app = FastAPI(
     title="SafeON 안전관제 API",
-    version="2.0.0",
+    version="3.0.0",
     lifespan=lifespan,
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "PATCH"],
+    allow_headers=["Content-Type"],
 )
 
 
-@app.post("/api/ingest/proximity")
-def ingest_proximity(reading: ProximityReading):
-    return ingest.handle_proximity(reading.model_dump(mode="json"), transport="http")
-
-
-@app.post("/api/ingest/environment")
-def ingest_environment(reading: EnvironmentReading):
-    return ingest.handle_environment(
-        reading.model_dump(mode="json"), transport="http"
-    )
-
-
-@app.post("/api/ingest/camera")
-def ingest_camera(reading: CameraReading):
-    return ingest.handle_camera(reading.model_dump(mode="json"), transport="http")
-
-
-@app.post("/api/batch")
-def ingest_batch(records: list[dict]):
-    return ingest.handle_batch(records, transport="http")
+@app.post("/api/distance")
+def receive_distance(reading: DistanceReading):
+    """Receive the only two field values supplied by the measurement laptop."""
+    return ingest.handle(reading)
 
 
 @app.get("/api/live")
@@ -118,8 +99,8 @@ def live():
         for item in devices
     }
     proximity = []
-    for source in ingest.proximity_latest.values():
-        item = dict(source)
+    if ingest.latest is not None:
+        item = dict(ingest.latest)
         worker_status = status_by_device.get((item["worker_id"], "WORKER"))
         if worker_status == "OFFLINE":
             item.update(
@@ -133,23 +114,10 @@ def live():
             )
         proximity.append(item)
 
-    cameras = []
-    for source in (
-        list(ingest.camera_latest.values()) or db.latest_cameras(conn)
-    ):
-        item = dict(source)
-        camera_id = f"CAM-{item['equipment_id']}"
-        if status_by_device.get((camera_id, "CAMERA")) == "OFFLINE":
-            item["camera_status"] = "OFFLINE"
-        cameras.append(item)
-
     return {
         "proximity": proximity,
-        "environment": (
-            list(ingest.environment_latest.values())
-            or db.latest_environment(conn)
-        ),
-        "cameras": cameras,
+        "environment": [ingest.environment],
+        "cameras": [],
     }
 
 
@@ -203,12 +171,7 @@ def legacy_status():
 @app.get("/api/environment")
 @app.get("/api/env")
 def environment():
-    return list(ingest.environment_latest.values()) or db.latest_environment(conn)
-
-
-@app.get("/api/cameras")
-def cameras():
-    return list(ingest.camera_latest.values()) or db.latest_cameras(conn)
+    return [ingest.environment]
 
 
 def _report_summary(result: dict) -> str:
@@ -371,8 +334,10 @@ def approve_recommendations(
 def health():
     return {
         "status": "ok",
-        "mqtt": ingest.stats,
-        "mqtt_error": getattr(app.state, "mqtt_error", None),
+        "protocol": "HTTP",
+        "endpoint": "/api/distance",
+        "input_fields": ["distance_m", "distance_level"],
+        "distance_ingest": ingest.stats,
         "websocket_clients": len(ws_clients),
     }
 
