@@ -1,0 +1,3 @@
+opencv-python>=4.10
+requests>=2.32
+ultralytics>=8.3
