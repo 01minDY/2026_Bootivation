@@ -2,7 +2,7 @@
 
 # SafeON
 
-### 거리 데이터를 위험 사건과 개선조치로 연결하는 실시간 산업안전 관제 MVP
+### 실시간 산업현장 아차사고 예방 및 통합 안전 관제 MVP
 
 웹캠 기반 측정 노트북에서 근로자와 지게차 사이의 거리 데이터를 받아<br>
 위험 단계 판정, 사건 기록, 실시간 관제, 개별 리포트까지 연결합니다.
@@ -55,7 +55,7 @@ SafeON은 거리 신호를 다음과 같은 **안전관리 흐름**으로 전환
 
 ## Final Demo
 
-최종 해커톤 시연에서는 ESP32와 UWB 센서를 사용하지 못했습니다. 대신 웹캠으로
+최종 해커톤 시연에서는 ESP32와 UWB 센서를 사용하는 대신 웹캠으로
 거리를 측정하는 노트북과 관제 노트북을 분리하고, 두 노트북이 같은 네트워크에서
 HTTP로 통신하도록 구성했습니다.
 
@@ -187,7 +187,7 @@ sequenceDiagram
 
 | 초기 ESP32·UWB 프로토타입 | 최종 노트북 간 통신 구성 |
 |---|---|
-| `docs/assets/hardware-esp32-uwb.jpg` 추가 예정 | `docs/assets/hardware-laptop-demo.jpg` 추가 예정 |
+|<img width="3024" height="4032" alt="KakaoTalk_20260725_090247650" src="https://github.com/user-attachments/assets/0a946936-4974-49a0-905b-37747ea85455" />|<img width="1103" height="1667" alt="KakaoTalk_20260728_185406646" src="https://github.com/user-attachments/assets/56eeec7a-5e66-4335-993c-929ffa93e785" />|
 
 ## Engineering Decisions
 
@@ -218,29 +218,6 @@ sequenceDiagram
 
 하드웨어 연결 여부와 무관하게 대시보드와 사건 처리 로직을 검증할 수 있도록
 동일한 30초 시나리오를 반복 실행할 수 있게 했습니다.
-
-## My Contribution
-
-### Backend & Data
-
-- FastAPI 기반 거리 데이터 수집 및 조회 API 설계
-- `DANGER` 진입·갱신·종료 사건 생명주기 구현
-- SQLite 사건·장치·환경·개선조치 데이터 모델링
-- 기존 데이터베이스를 보존하는 스키마 마이그레이션 처리
-
-### Realtime Dashboard
-
-- WebSocket 기반 실시간 상태 전파
-- 사건 목록과 개별 사건 리포트 연결
-- 개선조치와 권고 승인 상태 관리
-- 연결 종료 시 WebSocket 자동 재연결
-
-### System Integration & Validation
-
-- 측정 노트북과 관제 노트북 사이의 2-field HTTP 계약 정의
-- 거리 데이터 송신 도구와 하드웨어팀 연동 예제 구현
-- 재현 가능한 30초 시뮬레이터 작성
-- 위험 판정, 사건 생명주기, 통신 계약 자동 테스트 작성
 
 ## Validation
 
@@ -293,13 +270,11 @@ SafeON은 기획, 하드웨어, 거리 측정, 관제 소프트웨어, 비즈니
 
 | 이름 | 담당 역할 |
 |---|---|
-| 이승환 | 역할 확인 후 입력 |
-| 김수영 | 역할 확인 후 입력 |
-| 민동연 | 관제 소프트웨어 개발 및 시스템 통합 |
-| 이윤민 | 역할 확인 후 입력 |
-| 하은지 | 역할 확인 후 입력 |
-
-> 팀원별 역할이 확정되면 위 표를 실제 담당 업무 기준으로 업데이트합니다.
+| 이승환 | PM: 프로젝트 운영 및 IR |
+| 김수영 | 관제 소프트웨어 UI 설계 및 개발 |
+| 민동연 | 안전관제 시스템 구현 및 시스템 통합 |
+| 이윤민 | HW 구현, 거리 인식 알고리즘 |
+| 하은지 | 근로자 태그 및 중장비 HW 구현 |
 
 ## Award
 
@@ -310,9 +285,7 @@ SafeON은 기획, 하드웨어, 거리 측정, 관제 소프트웨어, 비즈니
 - 팀명: SafeON
 - 수여: 건국대학교 창업지원본부
 
-> [!NOTE]
-> 📷 상장 또는 팀 수상 사진은 `docs/assets/award.jpg`로 추가할 예정입니다.<br>
-> 공개 전 팀원의 이름·얼굴 공개 동의를 확인합니다.
+<img width="3000" height="4000" alt="KakaoTalk_20260728_190319852" src="https://github.com/user-attachments/assets/8b556570-3ca5-4eb3-ba2d-a8ffbb3eabfb" />
 
 ## Limitations & Next Steps
 
