@@ -1,4 +1,4 @@
-<div align="center">
+<img width="1536" height="702" alt="KakaoTalk_20260725_055138898_02" src="https://github.com/user-attachments/assets/2dd105b5-55c7-4a30-a99b-7418fae40cd4" /><div align="center">
 
 # SafeON
 
@@ -128,8 +128,8 @@ sequenceDiagram
 - `SAFE`, `CAUTION`, `DANGER` 단계별 시각적 구분
 - 통신이 종료되면 대시보드 자동 재연결
 
-> [!NOTE]
-> 📷 대시보드 전체 화면은 `docs/assets/dashboard-overview.png`로 추가할 예정입니다.
+<img width="1536" height="702" alt="KakaoTalk_20260725_055138898_02" src="https://github.com/user-attachments/assets/ad3bf5d7-2c09-40ab-8e74-6b2045c91363" />
+
 
 ### 2. 위험 사건 생명주기 관리
 
@@ -138,6 +138,7 @@ sequenceDiagram
 - 안전 단계 복귀 시 진행 중인 사건 종료
 - 사건 상태를 `OPEN`, `ACK`, `CLOSED`로 관리
 
+
 ### 3. 개별 사건 리포트
 
 - 사건 ID 기반 상세 조회
@@ -145,8 +146,8 @@ sequenceDiagram
 - 최소 접근거리와 위험 단계
 - 당시 환경 정보와 조치 상태
 
-> [!NOTE]
-> 📷 사건 상세 화면은 `docs/assets/incident-report.png`로 추가할 예정입니다.
+<img width="1536" height="760" alt="KakaoTalk_20260725_055138898_04" src="https://github.com/user-attachments/assets/2400f35d-273f-4323-9d3c-03119f12a843" />
+
 
 ### 4. 개선조치 관리
 
@@ -155,11 +156,8 @@ sequenceDiagram
 - 권고 승인 여부 기록
 - 사건 내역 CSV 다운로드
 
-### 5. 재현 가능한 30초 시연
+<img width="1513" height="769" alt="KakaoTalk_20260725_065538773" src="https://github.com/user-attachments/assets/b3a742f3-f626-41f0-a07a-f40d7672f03f" />
 
-하드웨어 상태와 관계없이 전체 관제 흐름을 확인할 수 있도록
-`SAFE → CAUTION → DANGER → CAUTION → SAFE` 시나리오를 30초 안에
-재현하는 시뮬레이터를 구현했습니다.
 
 ## Hardware Prototype & Technical Pivot
 
@@ -179,11 +177,6 @@ sequenceDiagram
 | WebSocket 대시보드 | 구현 및 통합 완료 | 사용 |
 
 ### Hardware Photos
-
-> [!IMPORTANT]
-> 📷 실제 하드웨어 구성 사진을 아래 위치에 추가할 예정입니다.<br>
-> ESP32·UWB 사진에는 **초기 하드웨어 프로토타입이며 최종 시연에는 미사용**했다는
-> 설명을 함께 표시합니다.
 
 | 초기 ESP32·UWB 프로토타입 | 최종 노트북 간 통신 구성 |
 |---|---|
