@@ -1,5 +1,3 @@
-<img width="1536" height="702" alt="KakaoTalk_20260725_055138898_02" src="https://github.com/user-attachments/assets/2dd105b5-55c7-4a30-a99b-7418fae40cd4" /><div align="center">
-
 # SafeON
 
 ### 실시간 산업현장 아차사고 예방 및 통합 안전 관제 MVP
