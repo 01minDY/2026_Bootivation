@@ -1,4 +1,4 @@
-
+<div align="center">
 # SafeON
 
 ### 실시간 산업현장 아차사고 예방 및 통합 안전 관제 MVP
@@ -20,9 +20,6 @@
 
 </div>
 
-> [!NOTE]
-> 🎬 실제 관제 화면 GIF는 `docs/assets/safeon-demo.gif`로 추가할 예정입니다.<br>
-> 권장 장면: `SAFE → CAUTION → DANGER → 사건 생성 → 개별 리포트 → 개선조치`
 
 ## Project Overview
 
